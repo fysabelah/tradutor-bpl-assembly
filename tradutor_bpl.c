@@ -40,11 +40,11 @@ bool identify_begin_variable_block(char*);
 bool identify_local_var(char*, var_locais*);
 bool identify_end_variable_block(char*);
 int stack_size_check(var_locais*);
-void print_var_pilha(int, var_locais*);
+void save_var_on_stack(int, var_locais*);
 bool identify_assignment(char*, info_func*, var_locais*);
 int search_variable_stack_position(char [], var_locais *);
-void monta_nome_param(info_func*, bool, int, int);
-void retorna_varival_montada(char *, char, char, int);
+void create_name_param(info_func*, bool, int, int);
+void mount_name_var(char *, char, char, int);
 int return_parameter_position(info_func*, char *);
 void return_appropriate_register(int, char, char*);
 bool identify_return_of_function(char*, info_func*, var_locais*);
@@ -85,7 +85,7 @@ int main() {
 
             printf("\t\tsubq $%d, %%rsp\n\n", info_pilha.tamanho_pilha);
             
-            print_var_pilha(info_pilha.tamanho_pilha, &variaveis_funcao);
+            save_var_on_stack(info_pilha.tamanho_pilha, &variaveis_funcao);
         }
 
         identify_assignment(line, &dados_func, &variaveis_funcao);
@@ -111,7 +111,7 @@ bool identify_conditional(char *line, info_func *info_func, var_locais *var, int
 
     if (read_if == 3) {
         char var_to_comper[10];
-        retorna_varival_montada(var_to_comper, cond_type_op, cond_type, cond_number);
+        mount_name_var(var_to_comper, cond_type_op, cond_type, cond_number);
 
         int pos = search_variable_stack_position(var_to_comper, var);
 
@@ -150,8 +150,8 @@ bool get_array(char *line, info_func *info_func, var_locais *var) {
 
     if (read_get_array == 6) {
         char nome_array[10], nome_var_atribute[10];
-        retorna_varival_montada(nome_array, type_var, 'a', num_type_var);
-        retorna_varival_montada(nome_var_atribute, type_var_go, int_or_array_var_go, num_var_go);
+        mount_name_var(nome_array, type_var, 'a', num_type_var);
+        mount_name_var(nome_var_atribute, type_var_go, int_or_array_var_go, num_var_go);
 
         int pos = search_variable_stack_position(nome_array, var);
 
@@ -200,8 +200,8 @@ bool set_array(char *line, info_func *info_func, var_locais *var) {
 
     if (read_set_array == 6) {
         char nome_array[10], nome_var_set[10];
-        retorna_varival_montada(nome_array, type_var, 'a', num_type_var);
-        retorna_varival_montada(nome_var_set, type_var_go, int_or_array_var_go, num_var_go);
+        mount_name_var(nome_array, type_var, 'a', num_type_var);
+        mount_name_var(nome_var_set, type_var_go, int_or_array_var_go, num_var_go);
 
         int pos = search_variable_stack_position(nome_array, var);
 
@@ -254,7 +254,7 @@ bool identify_return_of_function(char *line, info_func *info_func, var_locais *v
 
         char var_to_return[10];
 
-        retorna_varival_montada(var_to_return, op_var_return, type_var, num);
+        mount_name_var(var_to_return, op_var_return, type_var, num);
 
         int pos = search_variable_stack_position(var_to_return, var);
 
@@ -281,7 +281,7 @@ bool identify_return_of_function(char *line, info_func *info_func, var_locais *v
     return false;
 }
 
-void retorna_varival_montada(char *pont_recebe, char char1, char char2, int num_param) {
+void mount_name_var(char *pont_recebe, char char1, char char2, int num_param) {
     char codigo[10];
     char nome[4] = {char1, char2};
 
@@ -332,8 +332,8 @@ bool identify_assignment(char *line, info_func *info_func, var_locais *var) {
     if (read_var_body == 3) {
         char var_recebe[10], var_ser_atribuido[10];
 
-        retorna_varival_montada(var_recebe, 'v', 'i', num_var_op1);
-        retorna_varival_montada(var_ser_atribuido, ass_type_op1, 'i', num_ass_type_op1);
+        mount_name_var(var_recebe, 'v', 'i', num_var_op1);
+        mount_name_var(var_ser_atribuido, ass_type_op1, 'i', num_ass_type_op1);
 
         int pos_var_recebe = search_variable_stack_position(var_recebe, var);
         int pos_var_ser_atribuida = search_variable_stack_position(var_ser_atribuido, var);
@@ -362,9 +362,9 @@ bool identify_assignment(char *line, info_func *info_func, var_locais *var) {
         char var_recebe[10], var_op1[10], var_op2[10];
         int pos_var_ser_atribuida;
 
-        retorna_varival_montada(var_recebe, 'v', 'i', num_var_op1);
-        retorna_varival_montada(var_op1, ass_type_op1, 'i', num_ass_type_op1);
-        retorna_varival_montada(var_op2, ass_type_op2, 'i', num_ass_type_op2);
+        mount_name_var(var_recebe, 'v', 'i', num_var_op1);
+        mount_name_var(var_op1, ass_type_op1, 'i', num_ass_type_op1);
+        mount_name_var(var_op2, ass_type_op2, 'i', num_ass_type_op2);
 
         int pos_var_recebe = search_variable_stack_position(var_recebe, var);
 
@@ -448,7 +448,7 @@ int search_variable_stack_position(char nome_var[], var_locais *dados_var) {
     return -1;
 }
 
-void print_var_pilha(int tam_pilha, var_locais *var) {
+void save_var_on_stack(int tam_pilha, var_locais *var) {
     int tam_atual = 0, tam_var;
 
     for (int i = 0; i < (*var).quantidade; i++) {
@@ -561,7 +561,7 @@ bool identify_functions(char *line, info_func *info) {
         info->quantidade_params = 1;
         
         (*info).info_params[0].isInt = validate_type(par_type1);
-        monta_nome_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
         
         return true;
     }
@@ -570,10 +570,10 @@ bool identify_functions(char *line, info_func *info) {
         info->quantidade_params = 2;
         
         (*info).info_params[0].isInt = validate_type(par_type1);
-        monta_nome_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
 
         (*info).info_params[1].isInt = validate_type(par_type2);
-        monta_nome_param(info, (*info).info_params[1].isInt, 1, par_number2);
+        create_name_param(info, (*info).info_params[1].isInt, 1, par_number2);
 
         return true;
     }
@@ -582,13 +582,13 @@ bool identify_functions(char *line, info_func *info) {
         info->quantidade_params = 3;
 
         (*info).info_params[0].isInt = validate_type(par_type1);
-        monta_nome_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
 
         (*info).info_params[1].isInt = validate_type(par_type2);
-        monta_nome_param(info, (*info).info_params[1].isInt, 1, par_number2);
+        create_name_param(info, (*info).info_params[1].isInt, 1, par_number2);
 
         (*info).info_params[2].isInt = validate_type(par_type3);
-        monta_nome_param(info, (*info).info_params[1].isInt, 3, par_number3);
+        create_name_param(info, (*info).info_params[1].isInt, 3, par_number3);
 
         return true;
     }
@@ -596,7 +596,7 @@ bool identify_functions(char *line, info_func *info) {
     return false;
 }
 
-void monta_nome_param(info_func *info, bool isInt, int indice, int num){
+void create_name_param(info_func *info, bool isInt, int indice, int num){
     char codigo[10];
 
     sprintf(codigo, "%d", num);

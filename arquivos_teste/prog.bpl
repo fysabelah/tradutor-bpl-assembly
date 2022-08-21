@@ -40,18 +40,6 @@ enddef
 return pi1
 end
 
-function f6 pa1
-def
-var vi1
-var vi2
-vet va3 size ci30
-enddef
-vi1 = ci1
-vi2 = call f5 vi1 va3
-vi2 = call f5 ci5 pa1
-return vi2
-end
-
 function f7 pi1 pa2
 def
 var vi1

@@ -1,107 +1,7 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-
-#define LINESZ 256
-
-typedef struct info_params {
-    bool isInt;
-    char nome[15];
-} info_params;
-
-typedef struct formato_funcao {
-    int quantidade_params;
-    info_params info_params[3];
-} info_func;
-typedef struct info_variaveis {
-    char tipo[10];
-    char nome[15];
-    int valor;
-    int tamanho;
-    int posicao_pilha;
-} var;
-
-typedef struct var_locais {
-    var variaveis[5];
-    int quantidade;
-} var_locais;
-
-typedef struct info_pilha {
-    int tamanho_pilha;
-    bool ja_construida;
-} info_pilha;
-
-
-void remove_newline(char*);
-bool identify_functions(char*, info_func*);
-bool validate_type(char);
-bool identify_begin_variable_block(char*);
-bool identify_local_var(char*, var_locais*);
-bool identify_end_variable_block(char*);
-int stack_size_check(var_locais*);
-void save_var_on_stack(int, var_locais*);
-bool identify_assignment(char*, info_func*, var_locais*);
-int search_variable_stack_position(char [], var_locais *);
-void create_name_param(info_func*, bool, int, int);
-void mount_name_var(char *, char, char, int);
-int return_parameter_position(info_func*, char *);
-void return_appropriate_register(int, char, char*);
-bool identify_return_of_function(char*, info_func*, var_locais*);
-bool get_array(char*, info_func*, var_locais*);
-bool set_array(char*, info_func*, var_locais*);
-bool identify_end_conditional(char *);
-bool identify_conditional(char*, info_func*, var_locais*, int);
-
-int main() {
-    info_func dados_func;
-    char line[LINESZ];
-    int qtd_if = 0;
-    var_locais variaveis_funcao;
-    info_pilha info_pilha;
-
-    printf(".data\n\n");
-    printf(".text\n");
-
-    while (fgets(line, LINESZ, stdin) != NULL) {
-        remove_newline(line);
-        
-        if (identify_functions(line, &dados_func)) {
-            info_pilha.tamanho_pilha = 0;
-            info_pilha.ja_construida = false;
-            variaveis_funcao.quantidade = 0;  
-            qtd_if = 0;
-        }
-
-        identify_local_var(line, &variaveis_funcao);
-        
-        if (identify_end_variable_block(line) && !info_pilha.ja_construida) {
-            info_pilha.ja_construida = true;
-
-            printf("\t\tpushq %%rbp\n");
-            printf("\t\tmovq %%rsp, %%rbp\n");
-
-            info_pilha.tamanho_pilha = stack_size_check(&variaveis_funcao);
-
-            printf("\t\tsubq $%d, %%rsp\n\n", info_pilha.tamanho_pilha);
-            
-            save_var_on_stack(info_pilha.tamanho_pilha, &variaveis_funcao);
-        }
-
-        identify_assignment(line, &dados_func, &variaveis_funcao);
-        get_array(line, &dados_func, &variaveis_funcao);
-        set_array(line, &dados_func, &variaveis_funcao);
-        identify_return_of_function(line, &dados_func, &variaveis_funcao);
-        identify_conditional(line, &dados_func, &variaveis_funcao, qtd_if);
-
-        if (identify_end_conditional(line)) {
-            printf("\t\tend_if%d:\n", qtd_if);
-            qtd_if++;
-        }
-    }
-
-    return 0;
-}
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include "biblioteca.h"
 
 bool identify_conditional(char *line, info_func *info_func, var_locais *var, int qtd_if) {
     int read_if, cond_number;
@@ -116,20 +16,20 @@ bool identify_conditional(char *line, info_func *info_func, var_locais *var, int
         int pos = search_variable_stack_position(var_to_comper, var);
 
         if (pos != -1) {
-            printf("\t\tmovl %d(%%rbp), %%r15d\n", pos * -1);
+            printf("\t\tmovl %d(%%rbp), %%r10d\n", pos * -1);
         } else {
             pos = return_parameter_position(info_func, var_to_comper);
 
             if (pos != -1) {
                 char reg[10];
                 return_appropriate_register(pos, cond_type, reg);
-                printf("\t\tmovl %%%s, %%r15d\n", reg);
+                printf("\t\tmovl %%%s, %%r10d\n", reg);
             } else {
-                printf("\t\tmovl $%d, %%r15d\n", cond_number);
+                printf("\t\tmovl $%d, %%r10d\n", cond_number);
             }
         }
 
-        printf("\t\tcmpl $0, %%r15d\n");
+        printf("\t\tcmpl $0, %%r10d\n");
         printf("\t\tje end_if%d\n", qtd_if);
 
         return true;
@@ -159,17 +59,17 @@ bool get_array(char *line, info_func *info_func, var_locais *var) {
 
         //Pegando array
         if (pos != -1) {
-            printf("\t\tleaq %d(%%rbp), %%r12\n", pos * -1);
+            printf("\t\tleaq %d(%%rbp), %%r10\n", pos * -1);
         } else {
             pos = return_parameter_position(info_func, nome_array);
             char reg[10];
             return_appropriate_register(pos, 'a', reg);
-            printf("\t\tmovq %%%s, %%r12\n", reg);
+            printf("\t\tmovq %%%s, %%r10\n", reg);
         }
 
         printf("\t\tmovabs $%d, %%r9\n", index);
         printf("\t\timulq $4, %%r9\n");
-        printf("\t\taddq %%r12, %%r9\n");
+        printf("\t\taddq %%r10, %%r9\n");
         printf("\t\tmovl (%%r9), %%r8d\n");
 
         //Pegando variavel atribuir
@@ -315,7 +215,7 @@ void return_appropriate_register(int posicao_param, char tipo_param, char *end) 
         }
     }
 
-    if (validate_type(tipo_param)) {
+    if (valida_tipo(tipo_param)) {
         reg[0] = 'e';
     }
 
@@ -488,7 +388,7 @@ int stack_size_check(var_locais *var) {
     return tamanho_variaveis;
 }
 
-void remove_newline(char *ptr) {
+void remove_nova_linha(char *ptr) {
   while (*ptr) {
     if (*ptr == '\n')
       *ptr = 0;
@@ -534,7 +434,7 @@ bool identify_local_var(char *line, var_locais *info_var) {
     return false;
 }
 
-bool identify_functions(char *line, info_func *info) {
+bool identifica_funcoes(char *line, info_func *info) {
     int func_dig, read_return, par_number1, par_number2, par_number3;
     char par_type1, par_type2, par_type3;
 
@@ -560,8 +460,8 @@ bool identify_functions(char *line, info_func *info) {
     if (read_return == 3) {
         info->quantidade_params = 1;
         
-        (*info).info_params[0].isInt = validate_type(par_type1);
-        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        (*info).info_params[0].isInt = valida_tipo(par_type1);
+        create_name_param(info, 0, par_number1);
         
         return true;
     }
@@ -569,11 +469,11 @@ bool identify_functions(char *line, info_func *info) {
     if (read_return == 5) {
         info->quantidade_params = 2;
         
-        (*info).info_params[0].isInt = validate_type(par_type1);
-        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        (*info).info_params[0].isInt = valida_tipo(par_type1);
+        create_name_param(info, 0, par_number1);
 
-        (*info).info_params[1].isInt = validate_type(par_type2);
-        create_name_param(info, (*info).info_params[1].isInt, 1, par_number2);
+        (*info).info_params[1].isInt = valida_tipo(par_type2);
+        create_name_param(info, 1, par_number2);
 
         return true;
     }
@@ -581,14 +481,14 @@ bool identify_functions(char *line, info_func *info) {
     if (read_return == 7) {
         info->quantidade_params = 3;
 
-        (*info).info_params[0].isInt = validate_type(par_type1);
-        create_name_param(info, (*info).info_params[0].isInt, 0, par_number1);
+        (*info).info_params[0].isInt = valida_tipo(par_type1);
+        create_name_param(info, 0, par_number1);
 
-        (*info).info_params[1].isInt = validate_type(par_type2);
-        create_name_param(info, (*info).info_params[1].isInt, 1, par_number2);
+        (*info).info_params[1].isInt = valida_tipo(par_type2);
+        create_name_param(info, 1, par_number2);
 
-        (*info).info_params[2].isInt = validate_type(par_type3);
-        create_name_param(info, (*info).info_params[1].isInt, 3, par_number3);
+        (*info).info_params[2].isInt = valida_tipo(par_type3);
+        create_name_param(info, 3, par_number3);
 
         return true;
     }
@@ -596,7 +496,7 @@ bool identify_functions(char *line, info_func *info) {
     return false;
 }
 
-void create_name_param(info_func *info, bool isInt, int indice, int num){
+void create_name_param(info_func *info, int indice, int num){
     char codigo[10];
 
     sprintf(codigo, "%d", num);
@@ -610,7 +510,7 @@ void create_name_param(info_func *info, bool isInt, int indice, int num){
     }
 }
 
-bool validate_type(char type) {
+bool valida_tipo(char type) {
     if (type == 'a') {
         return false;
     } 

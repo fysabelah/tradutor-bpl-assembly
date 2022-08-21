@@ -3,6 +3,7 @@
         "retorno"
     ],
     "files.associations": {
-        "def_func.h": "c"
+        "def_func.h": "c",
+        "biblioteca.h": "c"
     }
 }
